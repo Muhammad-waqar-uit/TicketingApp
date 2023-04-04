@@ -91,7 +91,8 @@ contract Token is ERC20, Ownable {
     //if all task are completed 
     if (allTasksCompleted(projectId)) {
         //total tokens of the burned need to change it 
-        uint256 tokenBalance = balanceOf(projectCreater[projectId]);
+        // uint256 tokenBalance = balanceOf(projectCreater[projectId]);
+        uint256 tokenBalance= projectTasks[projectId];
         //burning from the creator address
         _burn(projectCreater[projectId], tokenBalance);
         return true;
