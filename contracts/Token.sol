@@ -12,7 +12,6 @@ contract Token is ERC20, Ownable {
     mapping(uint256=>uint256) projectTasks; //mapping for project id to total no of task in specific projectId
     mapping(uint256=>address) projectCreater; //project id to creator (taking record who owns project)
     mapping(uint256=>mapping(uint256=>address)) assignTask;//project id to task assignment to particular address
-
     //events 
     event projectTask(uint projectId,uint nooftasks,address owner);//total project task on creation event
     event assignTasks(uint projectId,uint taskno,address from, address to);//assignment of task to any address event
@@ -131,3 +130,4 @@ contract Token is ERC20, Ownable {
         return assignTask[projectId][taskno];
     }
 }
+
