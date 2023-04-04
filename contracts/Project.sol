@@ -14,7 +14,11 @@ contract PROJECT is ERC721URIStorage,Ownable {
     Counters.Counter private _tokenIds; // Tracking the no of tokens minted
     Token private _token;
     // mapping (uint => uint) numOfTaskPerProject;
-
+    event invoiceCreated(
+        string tokenURI,
+        address to,
+        uint tokenId
+    );
     event projectCreated(
         string  tokenURI,
         address from,
@@ -66,10 +70,10 @@ contract PROJECT is ERC721URIStorage,Ownable {
         uint256 newTokenId = _tokenIds.current();
         _mint(msg.sender, newTokenId); // mint the token to the sender
         _setTokenURI(newTokenId, tokenURI);
+        emit invoiceCreated(tokenURI,msg.sender, newTokenId);
         }else{
             revert cannotGenerateInvoice();
         }
-       
     }
 //    function generateInvoice(uint256 projectId, string memory tokenURI) external {
 //     bytes memory payload = abi.encodeWithSignature("burnTokensIfAllTasksCompleted(uint256)", projectId);

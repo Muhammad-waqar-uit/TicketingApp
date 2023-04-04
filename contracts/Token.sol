@@ -13,6 +13,14 @@ contract Token is ERC20, Ownable {
     mapping(uint256=>address) projectCreater; //project id to creator taking record who owns project 
     mapping(uint256=>mapping(uint256=>address)) assignee;//project id to task assignment to particular address
 
+    //events 
+    event projectTask(uint projectId,uint nooftasks,address owner);
+    event assignTask(uint projectId,uint taskno,address from, address to);
+    event transfertoOther(uint projectId,uint taskno,address from, address to);
+    event taskComplete(uint projectId, uint taskno,address assignee,bool check);
+    event addmoreTask(uint projectId,uint amount,address owner);
+    event projectMarkedComplete(uint projectId,address owner,bool check);
+    
     constructor() ERC20("Token","TKN") Ownable() {}
 
     function mintToken(address to, uint256 amount,uint256 projectId) external {
@@ -21,6 +29,8 @@ contract Token is ERC20, Ownable {
         projectCreater[projectId]=to;
         //saving record for how many tasks for projectId
         projectTasks[projectId]=amount;
+
+        emit projectTask(projectId, amount, msg.sender);
     }
 
     function burnToken(address from,uint256 amount) external {
@@ -36,6 +46,7 @@ contract Token is ERC20, Ownable {
     _transfer(msg.sender, to, 1);
     //keeping record for assignee
     assignee[projectId][taskno] = to;
+    emit assignTask(projectId,taskno,msg.sender,to);
 }
 
     function transferTask(uint256 projectId, uint256 taskno, address to) external {
@@ -47,6 +58,7 @@ contract Token is ERC20, Ownable {
     _transfer(msg.sender,to,1);
     //updating record for task assignee
     assignee[projectId][taskno] = to;
+    emit transfertoOther(projectId,taskno,msg.sender,to);
 }
 
 
@@ -65,6 +77,7 @@ contract Token is ERC20, Ownable {
     // uint256 tokenBalance = balanceOf(msg.sender);
     //send a token to project creator back 
     _transfer(msg.sender, projectCreator, 1);
+    emit taskComplete(projectId,taskno,msg.sender,true);
     }
 
    function addTask(uint256 projectId, uint256 amount) external {
@@ -73,6 +86,7 @@ contract Token is ERC20, Ownable {
     uint256 existingTasks = projectTasks[projectId];//getting existing task
     projectTasks[projectId] = existingTasks + amount;//adding more task to the project
     _mint(msg.sender, amount);//minting tokens for tasks
+    emit addmoreTask(projectId, amount, msg.sender);
     }
 
     function allTasksCompleted(uint256 projectId) public view returns (bool) {
@@ -95,12 +109,11 @@ contract Token is ERC20, Ownable {
         uint256 tokenBalance= projectTasks[projectId];
         //burning from the creator address
         _burn(projectCreater[projectId], tokenBalance);
+        emit projectMarkedComplete(projectId,msg.sender,true);
         return true;
     }
     return false;
     }
-
-
 
     function getProjectTasks(uint256 projectId) external view returns (uint256) {
         //check no of project task
