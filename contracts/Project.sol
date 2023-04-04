@@ -59,7 +59,8 @@ contract PROJECT is ERC721URIStorage,Ownable {
     // }
 
     function generateInvoice(uint256 projectId,string memory tokenURI) external{
-        address sender=msg.sender;
+        address sender=msg.sender;//callers address
+        //condition to check if all the task are marked true for a project
         if(_token.burnTokensIfAllTasksCompleted(projectId,sender)){
         _tokenIds.increment(); // Increment the tokenIds counter
         uint256 newTokenId = _tokenIds.current();
