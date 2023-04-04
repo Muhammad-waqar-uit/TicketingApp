@@ -8,28 +8,27 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Token is ERC20, Ownable {
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public completedTasks;//task market completed for assignee address
-    mapping(uint256=>uint256) projectTasks; //mapping for project id to tatal no of task does the project have
-    mapping(uint256=>address) projectCreater; //project id to creator taking record who owns project 
-    mapping(uint256=>mapping(uint256=>address)) assignee;//project id to task assignment to particular address
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public completedTasks;//task marked completed for assignee address
+    mapping(uint256=>uint256) projectTasks; //mapping for project id to total no of task in specific projectId
+    mapping(uint256=>address) projectCreater; //project id to creator (taking record who owns project)
+    mapping(uint256=>mapping(uint256=>address)) assignTask;//project id to task assignment to particular address
 
     //events 
-    event projectTask(uint projectId,uint nooftasks,address owner);
-    event assignTask(uint projectId,uint taskno,address from, address to);
-    event transfertoOther(uint projectId,uint taskno,address from, address to);
-    event taskComplete(uint projectId, uint taskno,address assignee,bool check);
-    event addmoreTask(uint projectId,uint amount,address owner);
-    event projectMarkedComplete(uint projectId,address owner,bool check);
+    event projectTask(uint projectId,uint nooftasks,address owner);//total project task on creation event
+    event assignTasks(uint projectId,uint taskno,address from, address to);//assignment of task to any address event
+    event transfertoOther(uint projectId,uint taskno,address from, address to);//transfertoOther meaning assigner transfer his task to someone else event
+    event taskComplete(uint projectId, uint taskno,address assignee,bool check);//task complete marked by the assignee event
+    event addmoreTask(uint projectId,uint amount,address owner);//adding more task to current project event
+    event projectMarkedComplete(uint projectId,address owner,bool check); //marking project complete just for record that invoice generated event
     
     constructor() ERC20("Token","TKN") Ownable() {}
 
     function mintToken(address to, uint256 amount,uint256 projectId) external {
         _mint(to,amount);
-        //saving owner to project id mapping
+        //project id to owner mapping
         projectCreater[projectId]=to;
         //saving record for how many tasks for projectId
         projectTasks[projectId]=amount;
-
         emit projectTask(projectId, amount, msg.sender);
     }
 
@@ -38,100 +37,97 @@ contract Token is ERC20, Ownable {
     }
 
     function taskAssign(address to, uint256 projectId, uint256 taskno) external {
-    //require statement to check if assigner is the owner
-    require(projectCreater[projectId] == msg.sender, "Unauthorized");
-    //checking if task is not assigned to anyone
-    require(assignee[projectId][taskno] == address(0), "Task already assigned");
-    //toen is transfered to assignee for one task only
-    _transfer(msg.sender, to, 1);
-    //keeping record for assignee
-    assignee[projectId][taskno] = to;
-    emit assignTask(projectId,taskno,msg.sender,to);
-}
+        //require statement to check if assigner is the owner
+        require(projectCreater[projectId] == msg.sender, "Unauthorized");
+        //checking if task is not assigned to anyone
+        require(assignTask[projectId][taskno] == address(0), "Task already assigned");
+        //token is transfered to assignee for one task only
+        _transfer(msg.sender, to, 1);
+        //keeping record for assignee
+        assignTask[projectId][taskno] = to;
+        emit assignTasks(projectId,taskno,msg.sender,to);
+    }
 
     function transferTask(uint256 projectId, uint256 taskno, address to) external {
-    //check if assignee is owner of the task
-    require(assignee[projectId][taskno] == msg.sender, "Unauthorized");
-    //check if to address is not a zero address
-    require(to != address(0), "Invalid address");
-    //tranfering token to another person
-    _transfer(msg.sender,to,1);
-    //updating record for task assignee
-    assignee[projectId][taskno] = to;
-    emit transfertoOther(projectId,taskno,msg.sender,to);
-}
+        //check if assignee is owner of the task
+        require(assignTask[projectId][taskno] == msg.sender, "Unauthorized");
+        //check if to address is not a zero address
+        require(to != address(0), "Invalid address");
+        //tranfering token to another person to who task is assigned
+        _transfer(msg.sender,to,1);
+        //updating record for task assignee to next
+        assignTask[projectId][taskno] = to;
+        emit transfertoOther(projectId,taskno,msg.sender,to);
+    }
 
 
     function completeTask(uint256 projectId, uint256 taskno) external {
-    //check if assignee is the owner of the task
-    require(assignee[projectId][taskno] == msg.sender, "Unauthorized");
-    //check if task is not marked completed
-    require(!completedTasks[projectId][taskno][msg.sender], "Task already completed");
+        //check if assignee is the owner of the task
+        require(assignTask[projectId][taskno] == msg.sender, "Unauthorized");
+        //check if task is not marked completed
+        require(!completedTasks[projectId][taskno][msg.sender], "Task already completed");
 
-    // Mark the task as completed by the current assignee
-    completedTasks[projectId][taskno][msg.sender] = true;
+        // Mark the task as completed by the current assignee
+        completedTasks[projectId][taskno][msg.sender] = true;
 
-    // Transfer the token balance back to the project creator
-    address projectCreator = projectCreater[projectId];
-    // //take balance 
-    // uint256 tokenBalance = balanceOf(msg.sender);
-    //send a token to project creator back 
-    _transfer(msg.sender, projectCreator, 1);
-    emit taskComplete(projectId,taskno,msg.sender,true);
+        // getting address of project owner
+        address projectCreator = projectCreater[projectId];
+        //send a token to project creator back 
+        _transfer(msg.sender, projectCreator, 1);
+        emit taskComplete(projectId,taskno,msg.sender,true);
     }
 
-   function addTask(uint256 projectId, uint256 amount) external {
-    //check if creator of project is caller
-    require(projectCreater[projectId] == msg.sender, "Unauthorized");
-    uint256 existingTasks = projectTasks[projectId];//getting existing task
-    projectTasks[projectId] = existingTasks + amount;//adding more task to the project
-    _mint(msg.sender, amount);//minting tokens for tasks
-    emit addmoreTask(projectId, amount, msg.sender);
+    function addTask(uint256 projectId, uint256 amount) external {
+        //check if creator of project is calling
+        require(projectCreater[projectId] == msg.sender, "Unauthorized");
+        uint256 existingTasks = projectTasks[projectId];//getting existing task for project
+        projectTasks[projectId] = existingTasks + amount;//adding more task to the project
+        _mint(msg.sender, amount);//minting tokens for tasks
+        emit addmoreTask(projectId, amount, msg.sender);
     }
 
     function allTasksCompleted(uint256 projectId) public view returns (bool) {
-    uint256 totalTasks = projectTasks[projectId]; //getting total task for each token id for a project
-    for (uint256 i = 1; i <= totalTasks; i++) {//looping through to check if all the task aremarked completed
-        if (!completedTasks[projectId][i][assignee[projectId][i]]) {
-            return false;
+        uint256 totalTasks = projectTasks[projectId]; //getting total task for each token id for a project
+        for (uint256 i = 1; i <= totalTasks; i++) {//looping through to check if all the task are marked completed
+            if (!completedTasks[projectId][i][assignTask[projectId][i]]) {
+                return false;
+            }
         }
-    }
-    return true;
-}
-
-    function burnTokensIfAllTasksCompleted(uint256 projectId, address account) external returns (bool) {
-    //owner is the caller check
-    require(projectCreater[projectId] == account, "Unauthorized");
-    //if all task are completed 
-    if (allTasksCompleted(projectId)) {
-        //total tokens of the burned need to change it 
-        // uint256 tokenBalance = balanceOf(projectCreater[projectId]);
-        uint256 tokenBalance= projectTasks[projectId];
-        //burning from the creator address
-        _burn(projectCreater[projectId], tokenBalance);
-        emit projectMarkedComplete(projectId,msg.sender,true);
         return true;
     }
-    return false;
+
+    function burnTokensIfAllTasksCompleted(uint256 projectId, address account) external returns (bool) {
+        //owner is the caller check requirement
+        require(projectCreater[projectId] == account, "Unauthorized");
+        //if all task are completed check requirment
+        if (allTasksCompleted(projectId)) {
+            //total tokens of the project to burn
+            uint256 tokenBalance= projectTasks[projectId];
+            //burning from the creator address
+            _burn(projectCreater[projectId], tokenBalance);
+            emit projectMarkedComplete(projectId,msg.sender,true);
+            return true;
+        }
+        return false;
     }
 
     function getProjectTasks(uint256 projectId) external view returns (uint256) {
         //check no of project task
-    return projectTasks[projectId];
+        return projectTasks[projectId];
     }
 
     function getProjectCreater(uint256 projectId) external view returns (address) {
         //getting project creator for an ID
-    return projectCreater[projectId];
+        return projectCreater[projectId];
     }
     
     function isTaskCompleted(uint256 projectId, uint256 taskno, address assigneeAddress) external view returns (bool) {
-    //checking if task is marked true or not
-    return completedTasks[projectId][taskno][assigneeAddress];
+        //checking if task is marked true or not
+        return completedTasks[projectId][taskno][assigneeAddress];
     }
 
     function getAssignee(uint256 projectId, uint256 taskno) external view returns (address) {
-    //checking project and task assignee
-    return assignee[projectId][taskno];
+        //checking project and task assignee
+        return assignTask[projectId][taskno];
     }
 }
