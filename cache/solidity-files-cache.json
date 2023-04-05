@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\muhammad waqar\\Desktop\\check\\contracts\\Token.sol": {
-      "lastModificationDate": 1680592358494,
-      "contentHash": "6b9f66ca007bac430aca36e671ee5d92",
+      "lastModificationDate": 1680677676836,
+      "contentHash": "eac1754a31db9b0fc4e15e5294ea0c5c",
       "sourceName": "contracts/Token.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -226,8 +226,8 @@
       ]
     },
     "C:\\Users\\muhammad waqar\\Desktop\\check\\contracts\\Project.sol": {
-      "lastModificationDate": 1680591418397,
-      "contentHash": "f8efd246073cadaa65e7823a0f0ca95a",
+      "lastModificationDate": 1680678201255,
+      "contentHash": "33f6ab2d04e629f512ecfdffb817568f",
       "sourceName": "contracts/Project.sol",
       "solcConfig": {
         "version": "0.8.18",

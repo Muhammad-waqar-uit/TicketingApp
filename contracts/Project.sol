@@ -13,12 +13,20 @@ contract PROJECT is ERC721URIStorage,Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds; // Tracking the no of tokens minted
     Token private _token;
-    // mapping (uint => uint) numOfTaskPerProject;
+    
+    //event
     event invoiceCreated(
         string tokenURI,
         address to,
         uint tokenId
     );
+    event invoiceforTaskCreated(
+        string tokenURI,
+        address to,
+        uint tokenId,
+        uint[] tasks
+    );
+
     event projectCreated(
         string  tokenURI,
         address from,
@@ -26,17 +34,12 @@ contract PROJECT is ERC721URIStorage,Ownable {
         uint numOfTask, 
         uint tokenId
     );
-    event invoiceofTask(
-        string tokenURI,
-        address to,
-        uint tokenId,
-        uint[] arrtask
-    ); 
+
     constructor(Token token) ERC721("PROJECT", "PRJ") Ownable(){
         _token = token;
     }
 
-    // This function is called when the token is to be created
+    // This function is called when the project and token for task is to be created
     function createProject(address _to,string memory tokenURI,uint _numOfTask) external onlyOwner returns (uint256) {
         require(msg.sender != address(0),"Has Zero Address");
         require(_to != address(0),"Has Zero Address");
@@ -63,6 +66,8 @@ contract PROJECT is ERC721URIStorage,Ownable {
 
     function generateInvoice(uint256 projectId,string memory tokenURI) external{
         address sender=msg.sender;//callers address
+        address projectCreator=_token.getProjectCreater(projectId);
+        require(projectCreator==msg.sender,"Unauthorized");
         //condition to check if all the task are marked true meaning completed for a project
         if(_token.burnTokensIfAllTasksCompleted(projectId,sender)){
         _tokenIds.increment(); // Increment the tokenIds counter
@@ -71,28 +76,42 @@ contract PROJECT is ERC721URIStorage,Ownable {
         _setTokenURI(newTokenId, tokenURI);
         emit invoiceCreated(tokenURI,msg.sender, newTokenId);
         }else{
-            revert cannotGenerateInvoice();
+            revert cannotGenerateInvoice();// error when some task or all task are not completed
         }
     }
 
-        function generateInvoiceforTask(uint256 projectId,string memory tokenURI,uint[] memory arrtask) external{
-            for(uint i=0;i<arrtask.length;i++){
-                //address of each assignee for the task no
-                address assignee = _token.getAssignee(projectId, arrtask[i]);
-                //checking if address is not a zero address
-                require(assignee != address(0), "Assignee address not found");
-                //checking if that task is marked completed or not
-                _token.isTaskCompleted(projectId,arrtask[i],assignee);
-                _tokenIds.increment(); // Increment the tokenIds counter
-                uint256 newTokenId = _tokenIds.current();
-                _mint(msg.sender, newTokenId); // mint the token to the sender
-                _setTokenURI(newTokenId, tokenURI);
-                emit invoiceofTask(tokenURI, msg.sender, newTokenId, arrtask);
+        function generateInvoiceforTask(uint256 projectId, string memory tokenURI, uint[] memory taskIds) public {
+            //getting the owner of project id
+            address projectCreator=_token.getProjectCreater(projectId);
+            //checking if caller is owner of project
+            require(projectCreator==msg.sender,"Unauthorized");
+            bool allTasksCompleted = true; // flag to track if all tasks are completed
+    
+            // Loop through the array of taskIds
+            for (uint i = 0; i < taskIds.length; i++) {
+            // Get the address of the assignee for the task
+            address assignee = _token.getAssignee(projectId, taskIds[i]);
+            // Check if the assignee address is not zero
+            require(assignee != address(0), "Assignee address not found");
+            // Check if the task is marked as completed
+            if (!_token.isTaskCompleted(projectId, taskIds[i], assignee)) {
+                allTasksCompleted = false; // Update the flag if any task is not completed
+                break; // Exit the loop if any task is not completed
             }
-            //address of sender/project owner
-             address sender=msg.sender;
-             //burning the token of tasks
-            _token.burnToken(sender,arrtask.length);
+    }
+    
+        // Generate NFT and burn the tokens if all tasks are completed
+        if (allTasksCompleted) {
+            _tokenIds.increment(); // Increment the tokenIds counter
+            uint256 newTokenId = _tokenIds.current();
+            _mint(msg.sender, newTokenId); // Mint the token to the sender
+            _setTokenURI(newTokenId, tokenURI);
+            // Burn the tokens of completed tasks
+            _token.burnToken(msg.sender, taskIds.length);
+            emit invoiceforTaskCreated(tokenURI,msg.sender,newTokenId,taskIds);
+        } else {
+            revert("Not all tasks completed"); // Revert if any task is not completed
         }
+}
 
 }
